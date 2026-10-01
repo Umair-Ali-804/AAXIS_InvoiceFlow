@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Invoices{% endblock %}
+{% block heading %}<h1>Invoices</h1>{% endblock %}
+{% block content %}
+<section class="intake" id="intake">
+  <label class="dropzone" id="dropzone">
+    <input type="file" id="file-input" multiple accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.webp,.eml">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0l-4 4m4-4l4 4M4 16v3h16v-3"/></svg>
+    <span class="dz-main">Drop invoices here or <u>choose files</u></span>
+    <span class="dz-sub">PDF, scanned PDF, phone photo (JPG/PNG) or a forwarded email (.eml)</span>
+  </label>
+  <div class="intake-side">
+    <button class="btn" data-action="load-demo">Load demo invoices</button>
+    {% if imap %}<button class="btn" data-action="poll-email">Check AP inbox</button>{% endif %}
+    <button class="btn btn-quiet" data-action="reset-demo">Clear workspace</button>
+  </div>
+</section>
+
+<div class="list-toolbar">
+  <nav class="tabs" aria-label="Queues">
+    {% for key, label, _ in queues %}
+    <a href="/invoices?queue={{ key }}" class="tab {{ 'active' if key == queue }}" {{ 'aria-current=page' if key == queue }}>
+      {{ label }} <span class="tab-count">{{ counts[key] }}</span></a>
+    {% endfor %}
+  </nav>
+  <form class="search" method="get" action="/invoices" role="search">
+    <input type="hidden" name="queue" value="{{ queue }}">
+    <input type="search" name="q" value="{{ q }}" placeholder="Vendor, invoice number or AP ref" aria-label="Search invoices">
+  </form>
+</div>
+
+{% if rows %}
+<div class="table-wrap">
+<table class="table">
+  <thead>
+    <tr>
+      <th>Ref</th><th>Vendor</th><th>Invoice</th><th>Invoice date</th><th>Due</th>
+      <th class="r">Total</th><th>Status</th><th>Needs attention</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for inv in rows %}
+    {% set st = STATUS.get(inv.status, (inv.status, 'neutral')) %}
+    <tr data-href="/invoices/{{ inv.id }}" tabindex="0">
+      <td><a href="/invoices/{{ inv.id }}" class="ref">{{ inv.ref }}</a>
+        <div class="sub">{% if inv.source == 'email' %}
+          <svg class="ico" viewBox="0 0 20 20" aria-label="Email"><path d="M3 5h14v10H3zM3 5l7 6 7-6"/></svg>
+          {% else %}<svg class="ico" viewBox="0 0 20 20" aria-label="Upload"><path d="M6 3h6l3 3v11H6zM12 3v3h3"/></svg>{% endif %}
+          {{ inv.received_at | ago }}</div></td>
+      <td><strong>{{ inv.vendor_name or '—' }}</strong><div class="sub">{{ inv.file_name }}</div></td>
+      <td class="num nowrap">{{ inv.invoice_number or '—' }}</td>
+      <td class="nowrap">{{ inv.invoice_date | date }}</td>
+      <td class="nowrap">{{ inv.due_date | date }}</td>
+      <td class="r num nowrap"><strong>{{ inv.total | money(inv.currency) }}</strong></td>
+      <td><span class="pill pill-{{ st[1] }}">{{ st[0] }}</span></td>
+      <td class="attention"><div class="clamp">
+        {% if inv.status == 'posted' %}<span class="muted">Bill {{ inv.qbo_bill_id }}</span>
+        {% elif inv.status == 'rejected' %}<span class="muted">{{ inv.rejected_reason }}</span>
+        {% elif inv.open_issues %}{{ inv.open_issues[0].title }}{% if inv.open_issues|length > 1 %} <span class="muted">+{{ inv.open_issues|length - 1 }} more</span>{% endif %}
+        {% elif inv.status == 'awaiting_second_approval' %}Second approver{% else %}<span class="muted">All checks passed</span>{% endif %}
+      </div></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<div class="empty">
+  {% if q %}<p>No invoices match “{{ q }}”.</p>
+  {% elif queue == 'review' %}<p><strong>Nothing needs review.</strong> New invoices with problems will appear here.</p>
+  {% else %}<p>No invoices here yet. Drop files above or load the demo invoices.</p>{% endif %}
+</div>
+{% endif %}
+
+{% endblock %}

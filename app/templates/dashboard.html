@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Overview{% endblock %}
+{% block heading %}<h1>Accounts payable</h1>{% endblock %}
+{% block content %}
+{% if stats.total == 0 %}
+<section class="empty-hero">
+  <img src="/static/img/logo-mark.png" alt="" class="empty-mark">
+  <div>
+    <h2>No invoices yet</h2>
+    <p>Drop in a PDF, a phone photo or a forwarded email. InvoiceFlow reads it, checks the math and
+      looks for duplicates, and only asks you about what needs a person.</p>
+    <div class="row gap">
+      <button class="btn btn-primary" data-action="load-demo">Load the five demo invoices</button>
+      <a class="btn" href="/invoices?queue=all">Upload your own</a>
+    </div>
+  </div>
+</section>
+{% else %}
+<section class="queue-band" aria-label="Queue">
+  <a class="qb-item" href="/invoices?queue=review">
+    <span class="qb-num {{ 'tone-warn' if stats.to_review }}">{{ stats.to_review }}</span>
+    <span class="qb-label">Waiting on a reviewer</span>
+  </a>
+  <a class="qb-item" href="/invoices?queue=ready">
+    <span class="qb-num">{{ stats.ready }}</span>
+    <span class="qb-label">Ready to approve</span>
+  </a>
+  <a class="qb-item" href="/invoices?queue=posted">
+    <span class="qb-num">{{ stats.posted_amount | money }}</span>
+    <span class="qb-label">{{ stats.posted }} bill{{ '' if stats.posted == 1 else 's' }} posted to QuickBooks</span>
+  </a>
+  <div class="qb-item">
+    <span class="qb-num tone-ok">{{ stats.duplicate_amount_prevented | money }}</span>
+    <span class="qb-label">Duplicate payments stopped</span>
+  </div>
+</section>
+
+<div class="grid-2">
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Caught on first read</h2>
+      <p class="muted">{{ stats.straight_through }} of {{ stats.processed }} invoices passed every check without a person.
+        {% if stats.avg_seconds %}Average read time {{ stats.avg_seconds }} s.{% endif %}</p>
+    </div>
+    {% set max_v = (stats.exceptions.values() | max) or 1 %}
+    <ul class="bars" aria-label="Exceptions by type">
+      {% for label, value in stats.exceptions.items() %}
+      <li title="{{ label }}: {{ value }} invoice{{ '' if value == 1 else 's' }}">
+        <span class="bar-label">{{ label }}</span>
+        <span class="bar-track"><span class="bar-fill" style="width: {{ (value / max_v * 100) if value else 0 }}%"></span></span>
+        <span class="bar-value">{{ value }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head row between">
+      <h2>Latest invoices</h2>
+      <a href="/invoices?queue=all" class="link">See all</a>
+    </div>
+    <ul class="mini-list">
+      {% for inv in recent %}
+      {% set st = STATUS.get(inv.status, (inv.status, 'neutral')) %}
+      <li>
+        <a href="/invoices/{{ inv.id }}">
+          <span class="ml-main"><strong>{{ inv.vendor_name or inv.file_name }}</strong>
+            <span class="muted">{{ inv.invoice_number or inv.ref }}</span></span>
+          <span class="ml-amt num">{{ inv.total | money(inv.currency) }}</span>
+          <span class="pill pill-{{ st[1] }}">{{ st[0] }}</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>
+
+<section class="panel">
+  <div class="panel-head row between">
+    <h2>Recent activity</h2>
+    <a href="/audit" class="link">Full audit trail</a>
+  </div>
+  <ol class="feed">
+    {% for e in activity %}
+    <li>
+      <span class="feed-time">{{ e.ts | ago }}</span>
+      <span class="feed-who">{% if e.actor == 'system' %}InvoiceFlow{% else %}{{ e.actor }}{% endif %}</span>
+      <span class="feed-what">{% if e.invoice_ref %}<a href="/invoices/{{ e.invoice_id }}">{{ e.invoice_ref }}</a> {% endif %}{{ e.summary }}</span>
+    </li>
+    {% endfor %}
+  </ol>
+</section>
+{% endif %}
+{% endblock %}

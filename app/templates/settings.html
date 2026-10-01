@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+{% block heading %}<h1>Settings</h1>{% endblock %}
+{% block content %}
+{% if qbo_error %}<div class="notice notice-danger">{{ qbo_error }}</div>{% endif %}
+
+<div class="settings-grid">
+  <section class="panel">
+    <div class="panel-head row between">
+      <h2>QuickBooks Online</h2>
+      <span class="pill {{ 'pill-ok' if qbo.mode == 'sandbox' else 'pill-info' }}">{{ 'Sandbox connected' if qbo.mode == 'sandbox' else 'Simulator' }}</span>
+    </div>
+    {% if qbo.mode == 'sandbox' %}
+      <p>Approved invoices are created as unpaid Bills in company <strong>{{ qbo.realm_id }}</strong>
+        ({{ qbo.environment }}). Vendors are matched by name and created if missing.</p>
+    {% else %}
+      <p>No QuickBooks keys yet, so approved invoices go to the built-in simulator. It builds the exact
+        Bill payload the Accounting API receives, so the demo is identical to a live posting.</p>
+      <ol class="steps">
+        <li>Create an app at <a class="link" href="https://developer.intuit.com" target="_blank" rel="noopener">developer.intuit.com</a> — a sandbox company is included.</li>
+        <li>Put <code>QBO_CLIENT_ID</code> and <code>QBO_CLIENT_SECRET</code> in <code>.env</code>.</li>
+        <li>Either click Connect (needs <code>QBO_REDIRECT_URI</code> registered in the Intuit app), or paste
+          <code>QBO_REALM_ID</code> and <code>QBO_REFRESH_TOKEN</code> from Intuit’s OAuth Playground — easiest on Colab.</li>
+      </ol>
+    {% endif %}
+    <div class="row gap-s">
+      <a class="btn {{ 'btn-primary' if settings.qbo_configured and qbo.mode != 'sandbox' }}" href="/integrations/quickbooks/connect">
+        {{ 'Reconnect QuickBooks' if qbo.mode == 'sandbox' else 'Connect QuickBooks' }}</a>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head row between">
+      <h2>Email intake</h2>
+      <span class="pill {{ 'pill-ok' if imap else 'pill-muted' }}">{{ 'Connected' if imap else 'Not set up' }}</span>
+    </div>
+    <p>Vendors send invoices to a shared AP inbox. InvoiceFlow reads unread messages, takes the PDF and image
+      attachments, and records the sender with each invoice.</p>
+    {% if imap %}
+      <p class="muted">{{ settings.imap_user }} on {{ settings.imap_host }}, folder {{ settings.imap_folder }}.</p>
+      <button class="btn" data-action="poll-email">Check inbox now</button>
+    {% else %}
+      <p class="muted">Set <code>IMAP_HOST</code>, <code>IMAP_USER</code> and <code>IMAP_PASSWORD</code> (for Gmail, an app password).
+        Forwarded <code>.eml</code> files can always be dropped on the Invoices page.</p>
+    {% endif %}
+  </section>
+
+  <section class="panel">
+    <div class="panel-head row between">
+      <h2>Reading documents</h2>
+      <span class="pill {{ 'pill-ok' if settings.llm_enabled else 'pill-muted' }}">{{ 'AI cross-check on' if settings.llm_enabled else 'OCR + rules' }}</span>
+    </div>
+    <p>PDFs with a text layer are read exactly. Scans and photos are straightened, cleaned and read with
+      Tesseract OCR, keeping a confidence score for every word.</p>
+    {% if settings.llm_enabled %}
+      <p class="muted">A second reading by <strong>{{ settings.llm_provider }}</strong> ({{ settings.llm_model or 'default model' }})
+        is compared field by field. Agreement raises confidence; disagreement goes to a reviewer.</p>
+    {% else %}
+      <p class="muted">Optional: set <code>LLM_PROVIDER=anthropic</code> with <code>ANTHROPIC_API_KEY</code>
+        (or <code>openai</code> with <code>OPENAI_API_KEY</code>) to add an independent AI reading.</p>
+    {% endif %}
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>Review policy</h2></div>
+    <dl class="policy">
+      <div><dt>Send to review when a field is below</dt><dd>{{ (settings.confidence_threshold * 100) | round | int }}% confidence</dd></div>
+      <div><dt>Math tolerance</dt><dd>{{ settings.math_tolerance | money }}</dd></div>
+      <div><dt>Second approver required from</dt><dd>{{ settings.second_approval_limit | money }}</dd></div>
+      <div><dt>Same-amount duplicate window</dt><dd>{{ settings.duplicate_window_days }} days</dd></div>
+    </dl>
+    <p class="muted small">Change these in <code>.env</code> and restart. Nothing is ever posted without a person approving it.</p>
+  </section>
+</div>
+
+<section class="panel">
+  <div class="panel-head row between">
+    <h2>Approved vendors</h2>
+    <span class="muted">{{ vendors | length }} vendors</span>
+  </div>
+  <div class="table-wrap flat">
+  <table class="table">
+    <thead><tr><th>Vendor</th><th>Category</th><th>Terms</th><th>Billing email</th><th>QuickBooks ID</th></tr></thead>
+    <tbody>
+      {% for v in vendors %}
+      <tr><td><strong>{{ v.name }}</strong></td><td>{{ v.category or '—' }}</td><td>Net {{ v.terms_days }}</td>
+        <td class="muted">{{ v.email or '—' }}</td><td class="muted">{{ v.qbo_vendor_id or 'Created on first bill' }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endblock %}

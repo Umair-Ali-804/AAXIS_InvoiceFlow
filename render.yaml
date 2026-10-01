@@ -1,0 +1,25 @@
+# Render Blueprint: AAXIS InvoiceFlow as one free Docker web service.
+services:
+  - type: web
+    runtime: docker
+    name: aaxis-invoiceflow
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz
+    autoDeployTrigger: commit
+    envVars:
+      - key: PORT
+        value: "10000"
+      # The free disk is wiped when the service sleeps or redeploys; refill it with the 5 demo invoices.
+      - key: AUTO_LOAD_DEMO
+        value: "true"
+      - key: COMPANY_NAME
+        value: Harbor & Pine Property Management
+      - key: BASE_CURRENCY
+        value: USD
+      - key: SECOND_APPROVAL_LIMIT
+        value: "10000"
+      # Optional (add in Render -> Environment): ACCESS_PASSWORD to make the whole app private,
+      # LLM_PROVIDER + ANTHROPIC_API_KEY / OPENAI_API_KEY for the AI cross-check,
+      # QBO_* for a real QuickBooks sandbox. See DEPLOY.md.

@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}{{ inv.ref }} {{ inv.vendor_name or '' }}{% endblock %}
+{% block heading %}
+<nav class="crumbs" aria-label="Breadcrumb"><a href="/invoices?queue=review">Invoices</a><span aria-hidden="true">/</span><span>{{ inv.ref }}</span></nav>
+{% endblock %}
+{% block content %}
+<div class="review" id="review">
+  <header class="review-head">
+    <div class="rh-main">
+      <h1 id="rh-vendor">{{ inv.vendor_name or 'Unknown vendor' }}</h1>
+      <div class="rh-meta">
+        <span id="rh-status"></span>
+        <span class="rh-fact"><span class="muted">Invoice</span> <strong id="rh-number">{{ inv.invoice_number or '—' }}</strong></span>
+        <span class="rh-fact"><span class="muted">Total</span> <strong class="num" id="rh-total">{{ inv.total | money(inv.currency) }}</strong></span>
+        <span class="rh-fact muted">
+          {% if inv.source == 'email' %}Emailed by {{ (inv.source_detail or '').split(' — ')[0] }}{% else %}Uploaded{% endif %},
+          {{ inv.received_at | ago }}</span>
+      </div>
+    </div>
+    <div class="rh-actions" id="actions"></div>
+  </header>
+
+  <div class="review-body">
+    <section class="doc-pane" aria-label="Invoice document">
+      <div class="doc-toolbar">
+        <div class="row gap-s">
+          <button class="icon-btn" data-zoom="-1" aria-label="Zoom out">−</button>
+          <button class="icon-btn" data-zoom="0" aria-label="Fit width" title="Fit width">⤢</button>
+          <button class="icon-btn" data-zoom="1" aria-label="Zoom in">+</button>
+          <span class="muted small" id="doc-pages"></span>
+        </div>
+        <div class="row gap-s small">
+          <span class="doc-method" id="doc-method"></span>
+          <a class="link" href="/files/{{ inv.id }}/original" target="_blank" rel="noopener">Original file</a>
+        </div>
+      </div>
+      <div class="doc-scroll" id="doc-scroll"><div class="doc-stack" id="doc-stack"></div></div>
+    </section>
+
+    <section class="work-pane" aria-label="Review">
+      <div class="work-tabs" role="tablist">
+        <button role="tab" class="wtab active" data-tab="review" aria-selected="true">Review</button>
+        <button role="tab" class="wtab" data-tab="qbo" aria-selected="false">QuickBooks bill</button>
+        <button role="tab" class="wtab" data-tab="history" aria-selected="false">History <span class="tab-count" id="history-count"></span></button>
+      </div>
+      <div class="work-scroll" id="work"></div>
+      <div class="savebar" id="savebar" hidden>
+        <span><strong>Unsaved changes.</strong> <span class="muted">Saving re-runs every check.</span></span>
+        <div class="row gap-s">
+          <button class="btn btn-quiet" data-action="discard">Discard</button>
+          <button class="btn btn-primary" data-action="save">Save and recheck</button>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<dialog id="dialog" class="dialog">
+  <form method="dialog" id="dialog-form">
+    <h2 id="dialog-title"></h2>
+    <p id="dialog-body" class="muted"></p>
+    <label class="field-block" id="dialog-field">
+      <span id="dialog-label"></span>
+      <textarea id="dialog-input" rows="3"></textarea>
+    </label>
+    <div class="row gap-s end">
+      <button class="btn btn-quiet" value="cancel" formnovalidate>Cancel</button>
+      <button class="btn btn-primary" id="dialog-ok" value="ok">OK</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}
+{% block scripts %}
+<script>
+  window.INVOICE = {{ public | tojson }};
+  window.NEXT_ID = {{ next_id | tojson }};
+  window.DUPLICATE = {{ ({'id': duplicate.id, 'ref': duplicate.ref, 'status': duplicate.status, 'vendor_name': duplicate.vendor_name,
+      'invoice_number': duplicate.invoice_number, 'invoice_date': duplicate.invoice_date, 'total': duplicate.total,
+      'qbo_bill_id': duplicate.qbo_bill_id, 'received_at': duplicate.received_at, 'source': duplicate.source} if duplicate else None) | tojson }};
+</script>
+<script src="/static/js/review.js?v=3"></script>
+{% endblock %}

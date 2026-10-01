@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}InvoiceFlow{% endblock %} · AAXIS AI</title>
+  <link rel="icon" href="/static/img/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Marcellus&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/app.css?v=3">
+</head>
+<body class="page-{{ page }}">
+<a class="skip" href="#main">Skip to content</a>
+<div class="shell">
+  <aside class="sidebar" aria-label="Main navigation">
+    <a class="brand" href="/" aria-label="AAXIS AI InvoiceFlow home">
+      <img class="brand-mark" src="/static/img/logo-mark.png" alt="">
+      <span class="brand-text">
+        <img class="brand-word" src="/static/img/logo-word.png" alt="AAXIS AI Automations">
+        <span class="brand-product">InvoiceFlow</span>
+      </span>
+    </a>
+    <nav class="nav">
+      <a href="/" class="{{ 'active' if page == 'dashboard' }}">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 11h5v6H3zM12 3h5v14h-5zM3 3h5v5H3z"/></svg>
+        Overview</a>
+      <a href="/invoices?queue=review" class="{{ 'active' if page == 'invoices' }}">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 4h14v12H3zM3 12h4l1.5 2h3L13 12h4"/></svg>
+        Invoices
+        {% if nav_review %}<span class="nav-count" title="To review">{{ nav_review }}</span>{% endif %}</a>
+      <a href="/audit" class="{{ 'active' if page == 'audit' }}">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 3h8l3 3v11H5zM8 9h6M8 12h6M8 15h4"/></svg>
+        Audit trail</a>
+      <a href="/settings" class="{{ 'active' if page == 'settings' }}">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 6h12M4 14h12M8 4v4M13 12v4"/></svg>
+        Settings</a>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="conn">
+        <span class="dot {{ 'dot-on' if qbo.mode == 'sandbox' else 'dot-sim' }}"></span>
+        <span>QuickBooks {{ 'sandbox' if qbo.mode == 'sandbox' else 'simulator' }}</span>
+      </div>
+      <div class="client">{{ settings.company_name }}</div>
+    </div>
+  </aside>
+
+  <div class="main-col">
+    <header class="topbar">
+      <div class="topbar-title">{% block heading %}{% endblock %}</div>
+      <label class="actor">
+        <span class="actor-label">Signed in as</span>
+        <select id="actor-select" aria-label="Reviewer">
+          <option value="Maya Chen">Maya Chen · AP specialist</option>
+          <option value="Daniel Ortiz">Daniel Ortiz · Controller</option>
+          <option value="Priya Nair">Priya Nair · CFO</option>
+        </select>
+      </label>
+    </header>
+    <main id="main" class="content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+<div class="busy" id="busy" hidden>
+  <div class="busy-card">
+    <span class="spinner" aria-hidden="true"></span>
+    <div><strong id="busy-title">Reading invoices…</strong>
+      <p class="muted" id="busy-sub">Scanned pages go through OCR and take about 10 seconds each.</p></div>
+  </div>
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script src="/static/js/app.js?v=3"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

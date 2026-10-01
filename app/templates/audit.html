@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Audit trail{% endblock %}
+{% block heading %}<h1>Audit trail</h1>{% endblock %}
+{% block content %}
+<section class="chain {{ 'chain-ok' if chain.ok else 'chain-bad' }}">
+  <div class="chain-icon" aria-hidden="true">{{ '✓' if chain.ok else '!' }}</div>
+  <div class="chain-text">
+    {% if chain.ok %}
+      <strong>Chain intact — {{ chain.events }} events verified.</strong>
+      <span class="muted">Each entry carries the SHA-256 of the one before it, so any edit or deletion in the database shows up here.
+        {% if chain.head %}Latest hash <code>{{ chain.head[:16] }}…</code>{% endif %}</span>
+    {% else %}
+      <strong>Chain broken at event #{{ chain.broken_at }}.</strong>
+      <span>An entry was changed or removed outside the application. Export the trail and investigate before the next close.</span>
+    {% endif %}
+  </div>
+  <a class="btn" href="/api/audit/export.csv">Export CSV</a>
+</section>
+
+<div class="table-wrap">
+<table class="table table-audit">
+  <thead><tr><th>When</th><th>Who</th><th>Invoice</th><th>What happened</th><th>Hash</th></tr></thead>
+  <tbody>
+  {% for e in events %}
+    <tr>
+      <td class="nowrap">{{ e.ts | clock }}</td>
+      <td class="nowrap">{% if e.actor == 'system' %}<span class="muted">InvoiceFlow</span>{% else %}{{ e.actor }}{% endif %}</td>
+      <td class="nowrap">{% if e.invoice_ref %}<a class="ref" href="/invoices/{{ e.invoice_id }}">{{ e.invoice_ref }}</a>{% endif %}</td>
+      <td><span class="act act-{{ e.action }}">{{ e.action.replace('_', ' ') }}</span> {{ e.summary }}</td>
+      <td><code class="hash" title="{{ e.hash }}">{{ e.hash[:10] }}</code></td>
+    </tr>
+  {% else %}
+    <tr><td colspan="5" class="empty">Nothing recorded yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}
